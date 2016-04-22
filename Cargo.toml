@@ -2,5 +2,9 @@
 name = "build_compile"
 version = "0.1.0"
 authors = ["Jonas Nicklas <jonas.nicklas@gmail.com>"]
+description = "Helper crate for build scripts which compile to Rust"
+license = "MIT"
+homepage = "https://github.com/jnicklas/build_compile"
+repository = "https://github.com/jnicklas/build_compile"
 
 [dependencies]
