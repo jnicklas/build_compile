@@ -27,23 +27,15 @@ pub trait Processor {
 }
 
 pub fn process_root<T: Processor>(extension: &str, processor: &T) {
-    perform_processing_or_die(&current_dir().expect("cannot determin current directory"), extension, processor, false)
-}
-
-pub fn process_root_unconditionally<T: Processor>(extension: &str, processor: &T) {
-    perform_processing_or_die(&current_dir().expect("cannot determin current directory"), extension, processor, true)
+    perform_processing_or_die(&current_dir().expect("cannot determin current directory"), extension, processor)
 }
 
 pub fn process_dir<T: Processor, P: AsRef<Path>>(path: P, extension: &str, processor: &T) {
-    perform_processing_or_die(&path.as_ref(), extension, processor, false)
+    perform_processing_or_die(&path.as_ref(), extension, processor)
 }
 
-pub fn process_dir_unconditionally<T: Processor, P: AsRef<Path>>(path: P, extension: &str, processor: &T) {
-    perform_processing_or_die(&path.as_ref(), extension, processor, true)
-}
-
-fn perform_processing_or_die<T: Processor>(root_dir: &Path, extension: &str, processor: &T, force_build: bool) {
-    match perform_processing(root_dir, extension, processor, force_build) {
+fn perform_processing_or_die<T: Processor>(root_dir: &Path, extension: &str, processor: &T) {
+    match perform_processing(root_dir, extension, processor) {
         Ok(()) => (),
         Err(error) => {
             match error {
@@ -69,20 +61,22 @@ fn perform_processing_or_die<T: Processor>(root_dir: &Path, extension: &str, pro
     }
 }
 
-fn perform_processing<T: Processor>(root_dir: &Path, extension: &str, processor: &T, force_build: bool) -> Result<(), Error> {
+fn perform_processing<T: Processor>(root_dir: &Path, extension: &str, processor: &T) -> Result<(), Error> {
     let files = try!(files(root_dir, extension));
     for file in files {
         let rs_file = file.with_extension("rs");
-        if force_build || try!(needs_rebuild(&file, &rs_file)) {
-            try!(remove_old_file(&rs_file));
 
-            let input_file = try!(FileText::from_path(file));
-            let mut output_file = try!(fs::File::create(&rs_file));
+        // FIXME: should probably not unwrap here
+        println!("cargo:rerun-if-changed={}", file.to_str().unwrap());
 
-            try!(processor.process(input_file, &mut output_file));
+        try!(remove_old_file(&rs_file));
 
-            try!(make_read_only(&rs_file));
-        }
+        let input_file = try!(FileText::from_path(file));
+        let mut output_file = try!(fs::File::create(&rs_file));
+
+        try!(processor.process(input_file, &mut output_file));
+
+        try!(make_read_only(&rs_file));
     }
     Ok(())
 }
@@ -97,50 +91,6 @@ fn remove_old_file(rs_file: &Path) -> io::Result<()> {
                 _ => Err(e),
             }
         }
-    }
-}
-
-fn needs_rebuild(file: &Path,
-                 rs_file: &Path)
-                 -> io::Result<bool>
-{
-    return match fs::metadata(&rs_file) {
-        Ok(rs_metadata) => {
-            let metadata = try!(fs::metadata(&file));
-            Ok(compare_modification_times(&metadata, &rs_metadata))
-        }
-        Err(e) => {
-            match e.kind() {
-                io::ErrorKind::NotFound => Ok(true),
-                _ => Err(e),
-            }
-        }
-    };
-
-    #[cfg(unix)]
-    fn compare_modification_times(metadata: &fs::Metadata,
-                                  rs_metadata: &fs::Metadata)
-                                  -> bool
-    {
-        use std::os::unix::fs::MetadataExt;
-        metadata.mtime() >= rs_metadata.mtime()
-    }
-
-    #[cfg(windows)]
-    fn compare_modification_times(metadata: &fs::Metadata,
-                                  rs_metadata: &fs::Metadata)
-                                  -> bool
-    {
-        use std::os::windows::fs::MetadataExt;
-        metadata.last_write_time() >= rs_metadata.last_write_time()
-    }
-
-    #[cfg(not(any(unix,windows)))]
-    fn compare_modification_times(metadata: &fs::Metadata,
-                                  rs_metadata: &fs::Metadata)
-                                  -> bool
-    {
-        true
     }
 }
 
