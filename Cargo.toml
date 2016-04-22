@@ -1,5 +1,5 @@
 [package]
-name = "build_change_tracker"
+name = "build_compile"
 version = "0.1.0"
 authors = ["Jonas Nicklas <jonas.nicklas@gmail.com>"]
 
