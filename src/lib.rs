@@ -12,7 +12,7 @@ pub use filetext::FileText;
 pub struct Span(pub usize, pub usize);
 
 pub enum Error {
-    Source(FileText, &'static str, Span),
+    Source(FileText, String, Span),
     Io(io::Error)
 }
 
