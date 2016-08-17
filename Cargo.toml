@@ -1,6 +1,6 @@
 [package]
 name = "build_compile"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Jonas Nicklas <jonas.nicklas@gmail.com>"]
 description = "Helper crate for build scripts which compile to Rust"
 license = "MIT"
